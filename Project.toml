@@ -1,0 +1,16 @@
+name = "JuliaC"
+uuid = "acedd4c2-ced6-4a15-accc-2607eb759ba2"
+version = "0.1.0"
+authors = ["gbaraldi <baraldigabriel@gmail.com>"]
+
+[deps]
+LazyArtifacts = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[compat]
+LazyArtifacts = "1.11.0"
+Libdl = "1.11.0"
+PackageCompiler = "2.2.1"
+Pkg = "1.13.0"
