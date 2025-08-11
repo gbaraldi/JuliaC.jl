@@ -10,6 +10,7 @@ Base.@kwdef mutable struct ImageRecipe
     cpu_target::Union{String, Nothing} = nothing
     output_type::String = ""
     enable_trim::Bool = false
+    trim_mode::Union{String, Nothing} = nothing
     add_ccallables::Bool = false
     # build options
     file::String = ""
@@ -17,6 +18,10 @@ Base.@kwdef mutable struct ImageRecipe
     project::String = ""
     img_path::String = ""
     verbose::Bool = false
+    # C shim sources to compile and link into the final artifact
+    c_sources::Vector{String} = String[]
+    cflags::Vector{String} = String[]
+    extra_objects::Vector{String} = String[]
 end
 
 Base.@kwdef mutable struct LinkRecipe

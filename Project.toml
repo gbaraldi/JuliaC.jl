@@ -10,7 +10,7 @@ PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
-LazyArtifacts = "1.11.0"
-Libdl = "1.11.0"
+LazyArtifacts = "1"
+Libdl = "1"
 PackageCompiler = "2.2.1"
-Pkg = "1.13.0"
+Pkg = "1"

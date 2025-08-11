@@ -80,12 +80,13 @@ function link_products(recipe::LinkRecipe)
     compiler_cmd = get_compiler_cmd()
     allflags = Base.shell_split(JuliaConfig.allflags(; framework=false, rpath=false))
     try
+        mkpath(dirname(recipe.outname))
         if image_recipe.output_type == "--output-lib"
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path)  -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
         elseif image_recipe.output_type == "--output-sysimage"
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path)  -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE) $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE) $(julia_libs)`
         else
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
         end
         image_recipe.verbose && println("Running: $cmd2")
         run(cmd2)
