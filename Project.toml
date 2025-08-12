@@ -9,8 +9,18 @@ Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
+[apps]
+juliac = {}
+
 [compat]
 LazyArtifacts = "1"
 Libdl = "1"
 PackageCompiler = "2.2.1"
 Pkg = "1"
+julia = "1.12"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
