@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [ '1.12' ]
+        version: [ 'pre' ]
         os: [ ubuntu-latest, windows-latest, macos-14 ]
         arch: [ x64 ]
     steps:
