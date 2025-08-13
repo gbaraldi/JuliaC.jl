@@ -5,7 +5,7 @@ function get_rpath(recipe::LinkRecipe)
         if Sys.isapple()
             base_token = "-Wl,-rpath,'@loader_path/"
         elseif Sys.islinux()
-            base_token = "-Wl,-rpath,'$ORIGIN/"
+            base_token = "-Wl,-rpath,'\$ORIGIN/"
         else
             error("unimplemented")
         end
