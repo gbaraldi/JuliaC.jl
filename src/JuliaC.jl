@@ -1,6 +1,7 @@
 module JuliaC
 using Pkg
 using PackageCompiler
+using LazyArtifacts
 
 module JuliaConfig
     include("julia-config.jl")
