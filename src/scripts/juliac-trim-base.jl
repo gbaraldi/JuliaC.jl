@@ -104,6 +104,12 @@ end
     mapreduce_empty(::typeof(identity), op::F, T) where {F} = reduce_empty(op, T)
     mapreduce_empty(::typeof(abs), op::F, T) where {F}     = abs(reduce_empty(op, T))
     mapreduce_empty(::typeof(abs2), op::F, T) where {F}    = abs2(reduce_empty(op, T))
+    @noinline function throw_eachindex_mismatch_indices(::IndexLinear, inds...)
+        throw(DimensionMismatch("all inputs to eachindex must have the same indices"))
+    end
+    @noinline function throw_eachindex_mismatch_indices(::IndexCartesian, inds...)
+        throw(DimensionMismatch("all inputs to eachindex must have the same axes"))
+    end
 end
 @eval Base.Sys begin
     __init_build() = nothing
@@ -158,4 +164,8 @@ end
     function try_return_time(p, h, m, s, ms)
         return Time(h, m, s, ms)
     end
+end
+
+@eval Base.CoreLogging begin
+    @inline current_logger_for_env(std_level::LogLevel, group, _module) = nothing
 end

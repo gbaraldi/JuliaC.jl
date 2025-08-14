@@ -1,17 +1,20 @@
 
 function get_rpath(recipe::LinkRecipe)
     if recipe.rpath !== nothing
-        rpath_str = ""
+        local base_token
         if Sys.isapple()
-            rpath_str = "-Wl,-rpath,'@loader_path/'"
+            base_token = "-Wl,-rpath,'@loader_path/"
         elseif Sys.islinux()
-            rpath_str = "-Wl,-rpath,'\$ORIGIN/'"
+            base_token = "-Wl,-rpath,'\$ORIGIN/"
         else
             error("unimplemented")
         end
-        private_libdir = joinpath(recipe.rpath, "julia")
-        out_str = rpath_str * private_libdir * " " * rpath_str * recipe.rpath
-        return out_str
+        # If rpath is a relative subdir (e.g., "lib"), emit @loader_path/lib and @loader_path/lib/julia
+        priv_path = joinpath(recipe.rpath, "julia")
+        base_path = recipe.rpath
+        flag1 = base_token * base_path * "'"
+        flag2 = base_token * priv_path * "'"
+        return string(flag1, " ", flag2)
     else
         return JuliaConfig.ldrpath()
     end
@@ -65,7 +68,12 @@ end
 function link_products(recipe::LinkRecipe)
     image_recipe = recipe.image_recipe
     if image_recipe.output_type == "--output-o" || image_recipe.output_type == "--output-bc"
-        mv(image_recipe.img_path, recipe.outname)
+        mkpath(dirname(recipe.outname))
+        # Overwrite any previous build artifact to make tests idempotent
+        if isfile(recipe.outname)
+            rm(recipe.outname; force=true)
+        end
+        mv(image_recipe.img_path, recipe.outname; force=true)
         return
     end
     if image_recipe.output_type == "--output-lib" || image_recipe.output_type == "--output-sysimage"
@@ -80,18 +88,18 @@ function link_products(recipe::LinkRecipe)
     compiler_cmd = get_compiler_cmd()
     allflags = Base.shell_split(JuliaConfig.allflags(; framework=false, rpath=false))
     try
+        mkpath(dirname(recipe.outname))
         if image_recipe.output_type == "--output-lib"
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path)  -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
         elseif image_recipe.output_type == "--output-sysimage"
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path)  -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE) $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -shared -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE) $(julia_libs)`
         else
-            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
+            cmd2 = `$(compiler_cmd) $(allflags) $(rpath_str) -o $(recipe.outname) -Wl,$(Base.Linking.WHOLE_ARCHIVE) $(image_recipe.img_path) $(image_recipe.extra_objects...) -Wl,$(Base.Linking.NO_WHOLE_ARCHIVE)  $(julia_libs)`
         end
         image_recipe.verbose && println("Running: $cmd2")
         run(cmd2)
     catch e
-        println("\nCompilation failed: ", e)
-        exit(1)
+        error("\nCompilation failed: ", e)
     end
 end
 
