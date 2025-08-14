@@ -30,8 +30,7 @@ function compile_products(recipe::ImageRecipe)
     inst_cmd = addenv(`$(julia_cmd) --project=$project_arg -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"`, env_overrides...)
     recipe.verbose && println("Running: $inst_cmd")
     if !success(pipeline(inst_cmd; stdout, stderr))
-        println(stderr, "\nError encountered during instantiate/precompile of app project.")
-        exit(1)
+        error("Error encountered during instantiate/precompile of app project.")
     end
     # Compile the Julia code
     if recipe.img_path == ""
@@ -56,8 +55,7 @@ function compile_products(recipe::ImageRecipe)
     end
     recipe.verbose && println("Running: $cmd")
     if !success(pipeline(cmd; stdout, stderr))
-        println(stderr, "\nFailed to compile $(recipe.file)")
-        exit(1)
+        error("Failed to compile $(recipe.file)")
     end
 
     # If C shim sources are provided, compile them to objects for linking stage
@@ -92,8 +90,7 @@ function compile_products(recipe::ImageRecipe)
                 run(cmdc)
                 push!(recipe.extra_objects, obj)
             catch e
-                println("\nC shim compilation failed: ", e)
-                exit(1)
+                error("C shim compilation failed: ", e)
             end
         end
     end

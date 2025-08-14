@@ -99,8 +99,7 @@ function link_products(recipe::LinkRecipe)
         image_recipe.verbose && println("Running: $cmd2")
         run(cmd2)
     catch e
-        println("\nCompilation failed: ", e)
-        exit(1)
+        error("\nCompilation failed: ", e)
     end
 end
 
