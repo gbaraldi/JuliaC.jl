@@ -22,16 +22,14 @@ function compile_products(recipe::ImageRecipe)
     julia_cmd = `$(Base.julia_cmd(;cpu_target=recipe.cpu_target)) --startup-file=no --history-file=no`
     # Ensure the app project is instantiated and precompiled
     project_arg = recipe.project == "" ? Base.active_project() : recipe.project
-    # Respect compile-time depot path if provided
     env_overrides = Dict{String,Any}()
-    if recipe.depot_path !== nothing
-        env_overrides["JULIA_DEPOT_PATH"] = recipe.depot_path
-    end
     inst_cmd = addenv(`$(julia_cmd) --project=$project_arg -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"`, env_overrides...)
     recipe.verbose && println("Running: $inst_cmd")
+    precompile_time = time_ns()
     if !success(pipeline(inst_cmd; stdout, stderr))
         error("Error encountered during instantiate/precompile of app project.")
     end
+    println("Precompilation took $((time_ns() - precompile_time)/1e9) s")
     # Compile the Julia code
     if recipe.img_path == ""
         tmpdir = mktempdir()
@@ -48,16 +46,14 @@ function compile_products(recipe::ImageRecipe)
         cmd = `$cmd $a`
     end
     cmd = `$cmd $(joinpath(@__DIR__, "scripts", "juliac-buildscript.jl")) $(abspath(recipe.file)) $(recipe.output_type) $(string(recipe.add_ccallables))`
-    # Threading plus optional depot path at compile-time
+    # Threading
     cmd = addenv(cmd, "OPENBLAS_NUM_THREADS" => 1, "JULIA_NUM_THREADS" => 1)
-    if recipe.depot_path !== nothing
-        cmd = addenv(cmd, "JULIA_DEPOT_PATH" => recipe.depot_path)
-    end
     recipe.verbose && println("Running: $cmd")
+    compile_time = time_ns()
     if !success(pipeline(cmd; stdout, stderr))
         error("Failed to compile $(recipe.file)")
     end
-
+    println("Compilation took $((time_ns() - compile_time)/1e9) s")
     # If C shim sources are provided, compile them to objects for linking stage
     if !isempty(recipe.c_sources)
         compiler_cmd = JuliaC.get_compiler_cmd()
