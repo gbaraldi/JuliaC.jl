@@ -4,7 +4,6 @@ using JuliaC
 const ROOT = abspath(joinpath(@__DIR__, ".."))
 const TEST_PROJ = abspath(joinpath(@__DIR__, "app_project"))
 const TEST_SRC = joinpath(TEST_PROJ, "src", "test.jl")
-const TEMP_DEPOT = mktempdir()
 
 @testset "Programmatic API (trim)" begin
     outdir = mktempdir()
@@ -13,7 +12,6 @@ const TEMP_DEPOT = mktempdir()
         file = TEST_SRC,
         output_type = "--output-o",
         project = TEST_PROJ,
-        depot_path = TEMP_DEPOT,
         enable_trim = true,
         trim_mode = "safe",
         verbose = true,
@@ -41,7 +39,6 @@ end
         file = TEST_SRC,
         output_type = "--output-exe",
         project = TEST_PROJ,
-        depot_path = TEMP_DEPOT,
         enable_trim = true,
         trim_mode = "safe",
         verbose = true,
@@ -60,7 +57,6 @@ end
 @testset "CLI app entrypoint (trim)" begin
     outdir = mktempdir()
     exeout = joinpath(outdir, "app_cli")
-    depot = TEMP_DEPOT
     cliargs = String[
         "--output-exe", exeout,
         "--project", TEST_PROJ,
@@ -68,7 +64,6 @@ end
         TEST_SRC,
         "--bundle",
     ]
-    insert!(cliargs, 1, "--depot"); insert!(cliargs, 2, depot)
     # Invoke the module's CLI entrypoint directly to avoid any argument quoting issues
     JuliaC._main_cli(cliargs)
     # Determine actual executable path (Windows adds .exe)

@@ -19,7 +19,6 @@ Base.@kwdef mutable struct ImageRecipe
     project::String = ""
     img_path::String = ""
     # compile-time configuration
-    depot_path::Union{String, Nothing} = nothing
     verbose::Bool = false
     # C shim sources to compile and link into the final artifact
     c_sources::Vector{String} = String[]
@@ -77,10 +76,6 @@ function _parse_cli_args(args::Vector{String})
         elseif arg == "--project"
             i == length(args) && error("App project directory requires an argument")
             image_recipe.project = args[i+1]
-            i += 1
-        elseif arg == "--depot"
-            i == length(args) && error("Depot path requires an argument")
-            image_recipe.depot_path = args[i+1]
             i += 1
         elseif arg == "--bundle"
             bundle_specified = true
