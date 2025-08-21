@@ -1,4 +1,27 @@
 
+# Lightweight terminal spinner
+function _start_spinner(message::String; io::IO=stderr)
+    anim_chars = ("◐", "◓", "◑", "◒")
+    finished = Ref(false)
+    task = @spawn begin
+        idx = 1
+        t = Timer(0; interval=0.1, spawn=true)
+        try
+            while !finished[]
+                print(io, '\r', anim_chars[idx], ' ', message)
+                flush(io)
+                wait(t)
+                idx = idx == length(anim_chars) ? 1 : idx + 1
+            end
+        finally
+            close(t)
+            print(io, '\r', '✓', ' ', message, '\n')
+            flush(io)
+        end
+    end
+    return finished, task
+end
+
 function compile_products(recipe::ImageRecipe)
 
     # Only strip IR / metadata if not `--trim=no`
@@ -49,9 +72,16 @@ function compile_products(recipe::ImageRecipe)
     # Threading
     cmd = addenv(cmd, "OPENBLAS_NUM_THREADS" => 1, "JULIA_NUM_THREADS" => 1)
     recipe.verbose && println("Running: $cmd")
+    # Show a spinner while the compiler runs
+    spinner_done, spinner_task = _start_spinner("Compiling image...")
     compile_time = time_ns()
-    if !success(pipeline(cmd; stdout, stderr))
-        error("Failed to compile $(recipe.file)")
+    try
+        if !success(pipeline(cmd; stdout, stderr))
+            error("Failed to compile $(recipe.file)")
+        end
+    finally
+        spinner_done[] = true
+        wait(spinner_task)
     end
     println("Compilation took $((time_ns() - compile_time)/1e9) s")
     # If C shim sources are provided, compile them to objects for linking stage

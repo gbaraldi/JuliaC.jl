@@ -12,7 +12,7 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 [compat]
 LazyArtifacts = "1"
 Libdl = "1"
-PackageCompiler = "2.2.1"
+PackageCompiler = "2"
 Pkg = "1"
 julia = "1.10"
 

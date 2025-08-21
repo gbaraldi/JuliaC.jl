@@ -1,12 +1,145 @@
-Run via Pkg app entrypoint:
+## JuliaC
 
-```bash
-# After ensuring ~/.julia/bin is on PATH and the app is installed
-juliac --output-exe app_test_exe --experimental --verbose --bundle ./test_project --trim=safe --depot ~/.julia test_project/src/test.jl
+JuliaC is a small companion to PackageCompiler that streamlines turning a Julia entry file into a native executable, shared library, system image, or intermediate object/bitcode. It provides:
+
+- A minimal CLI app (`juliac`) suitable for `Pkg` apps
+- A simple library API with explicit "compile → link → bundle" steps
+- Optional bundling of `libjulia`/stdlibs and artifacts for portable distribution
+- Optional IR/metadata trimming for smaller binaries on Julia 1.12+
+
+Built on top of `PackageCompiler.jl`.
+
+### Requirements
+
+- Julia 1.12+
+- A working C compiler (`clang`/`gcc` on macOS/Linux; MSYS2 mingw on Windows)
+
+### Installation
+
+```julia
+pkg> add JuliaC
 ```
 
-Or via the module directly without installing the app:
+Optional: enable `Pkg` app shims on your shell PATH so you can run `juliac` directly:
 
 ```bash
-julia --project -e "using JuliaC; JuliaC.@main(ARGS)" -- --output-exe app_test_exe --experimental --verbose --bundle ./test_project --trim=safe --depot ~/.julia test_project/src/test.jl
+echo 'export PATH="$HOME/.julia/bin:$PATH"' >> ~/.bashrc    # adapt for your shell
 ```
+
+### Quick start (CLI)
+
+Compile an executable and produce a self-contained bundle in `build/`:
+
+```bash
+juliac \
+  --output-exe build/app_test_exe \
+  --project test/app_project \
+  --bundle build \
+  --trim=safe \
+  --experimental \
+  --verbose \
+  test/app_project/src/test.jl
+```
+
+Notes:
+- `--bundle` optionally accepts a directory; if omitted, it defaults to the output directory of `--output-*`.
+- `--trim[=mode]` enables IR/metadata stripping; on 1.12 prereleases this implies `--experimental`.
+- Define `@main function main(args::Vector{String})` in your entry file to build an executable.
+
+### Quick start (module, no app install)
+
+```bash
+julia --project -e "using JuliaC; JuliaC.@main(ARGS)" -- \
+  --output-exe build/app_test_exe \
+  --project test/app_project \
+  --bundle build \
+  --trim=safe \
+  --experimental \
+  --verbose \
+  test/app_project/src/test.jl
+```
+
+### CLI reference
+
+- `--output-exe|--output-lib|--output-sysimage|--output-o|--output-bc <path>`: Select output type and destination path.
+- `--project <path>`: App project to instantiate/precompile (defaults to active project).
+- `--bundle [<dir>]`: Copy required Julia libs/stdlibs and artifacts next to the output; also sets a relative rpath.
+- `--trim[=mode]`: Enable IR/metadata trimming (e.g. `--trim=safe`). Use `--trim=no` to disable.
+- `--compile-ccallable`: Export `ccallable` entrypoints (see C-callable section).
+- `--experimental`: Forwarded to Julia; required for `--trim` on some builds.
+- `--verbose`: Print underlying commands and timing.
+- `<file>`: The Julia entry file to compile (must define `@main` for executables).
+
+### Library API
+
+```julia
+using JuliaC
+
+img = ImageRecipe(
+    output_type = "--output-exe",
+    file        = "test/app_project/src/test.jl",
+    project     = "test/app_project",
+    enable_trim = true,
+    trim_mode   = "safe",
+    add_ccallables = false,
+    verbose     = true,
+)
+
+link = LinkRecipe(
+    image_recipe = img,
+    outname      = "build/app_test_exe",
+    rpath        = nothing, # set automatically when bundling
+)
+
+bun = BundleRecipe(
+    link_recipe = link,
+    output_dir  = "build", # or `nothing` to skip bundling
+    libdir      = "lib",
+)
+
+compile_products(img)
+link_products(link)
+bundle_products(bun)
+```
+
+### Bundling and rpath
+
+When `--bundle` (or `BundleRecipe.output_dir`) is set, JuliaC:
+- Copies `libjulia`/`libjulia-internal` and stdlibs into `<output_dir>/julia`
+- Copies required artifacts
+- Links your output with a relative rpath (macOS: `@loader_path`, Linux: `$ORIGIN`)
+- On macOS, creates convenience versioned `.dylib` symlinks if missing
+
+This produces a relocatable directory you can distribute.
+
+### Trimming
+
+On Julia 1.12+, JuliaC can strip IR and metadata to reduce size:
+
+```bash
+--trim=safe   # or "aggressive" depending on your risk tolerance
+```
+
+On certain builds, `--trim` requires `--experimental` (JuliaC will pass it through if needed).
+
+### C-callable entrypoints
+
+If you pass `--compile-ccallable` (or set `ImageRecipe.add_ccallables = true`), JuliaC will export `ccallable` entrypoints discovered in your code, and for executables generate a C `main` if you use `@main` with a `Vector{String}` signature.
+
+### Platform notes
+
+- macOS/Linux: requires `clang` or `gcc` available on PATH
+- Windows: looks for a MinGW compiler via `LazyArtifacts` or `JULIA_CC`
+- You can override the compiler with `ENV["JULIA_CC"]` (e.g. `clang`/`gcc` path)
+
+### Acknowledgements
+
+JuliaC builds on `PackageCompiler.jl` and Julia's own build machinery. Many thanks to their authors and contributors.
+
+### Contributing
+
+Issues and PRs are welcome. Please provide OS, Julia version, and a minimal reproducer when reporting problems.
+
+### License
+
+MIT. See the LICENSE file for details.
