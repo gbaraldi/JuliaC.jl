@@ -14,7 +14,7 @@ LazyArtifacts = "1"
 Libdl = "1"
 PackageCompiler = "2.2.1"
 Pkg = "1"
-julia = "1.12"
+julia = "1.10"
 
 [apps.juliac]
 
