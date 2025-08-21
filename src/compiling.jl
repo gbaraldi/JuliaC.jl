@@ -3,7 +3,7 @@
 function _start_spinner(message::String; io::IO=stderr)
     anim_chars = ("◐", "◓", "◑", "◒")
     finished = Ref(false)
-    task = @spawn begin
+    task = Threads.@spawn begin
         idx = 1
         t = Timer(0; interval=0.1, spawn=true)
         try
