@@ -5,7 +5,7 @@ function _start_spinner(message::String; io::IO=stderr)
     finished = Ref(false)
     task = Threads.@spawn begin
         idx = 1
-        t = Timer(0; interval=0.1; spawn=true)
+        t = Timer(0; interval=0.1)
         try
             while !finished[]
                 print(io, '\r', anim_chars[idx], ' ', message)
