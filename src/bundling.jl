@@ -27,6 +27,20 @@ function bundle_products(recipe::BundleRecipe)
             end
             mv(src_julia_dir, dest_julia_dir; force=true)
         end
+        # On Windows, place required DLLs next to the executable (in bin/) for loader discovery
+        if Sys.iswindows()
+            bindir = dest_root
+            # Recursively copy .dll files from julia dir into bin root
+            for (root, _, files) in walkdir(dest_julia_dir)
+                for f in files
+                    if endswith(f, ".dll")
+                        src = joinpath(root, f)
+                        dst = joinpath(bindir, f)
+                        cp(src, dst; force=true)
+                    end
+                end
+            end
+        end
     end
 
     # Determine where to place the built product within the bundle

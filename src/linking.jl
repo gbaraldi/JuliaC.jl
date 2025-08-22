@@ -84,6 +84,15 @@ function link_products(recipe::LinkRecipe)
             recipe.outname = of * soext
         end
     end
+    # Ensure .exe suffix for executables on Windows
+    @static if Sys.iswindows()
+        if image_recipe.output_type == "--output-exe"
+            of, ext = splitext(recipe.outname)
+            if lowercase(ext) != ".exe"
+                recipe.outname = of * ".exe"
+            end
+        end
+    end
     rpath_str = Base.shell_split(get_rpath(recipe))
     julia_libs = Base.shell_split(Base.isdebugbuild() ? "-ljulia-debug -ljulia-internal-debug" : "-ljulia -ljulia-internal")
     compiler_cmd = get_compiler_cmd()
