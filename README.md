@@ -32,7 +32,7 @@ Compile an executable and produce a self-contained bundle in `build/`:
 
 ```bash
 juliac \
-  --output-exe build/app_test_exe \
+  --output-exe app_test_exe \
   --project test/app_project \
   --bundle build \
   --trim=safe \
@@ -50,7 +50,7 @@ Notes:
 
 ```bash
 julia --project -e "using JuliaC; JuliaC.@main(ARGS)" -- \
-  --output-exe build/app_test_exe \
+  --output-exe app_test_exe \
   --project test/app_project \
   --bundle build \
   --trim=safe \
@@ -61,7 +61,8 @@ julia --project -e "using JuliaC; JuliaC.@main(ARGS)" -- \
 
 ### CLI reference
 
-- `--output-exe|--output-lib|--output-sysimage|--output-o|--output-bc <path>`: Select output type and destination path.
+- `--output-exe <name>`: Output native executable name (no path). Use `--bundle` to choose destination directory.
+- `--output-lib|--output-sysimage|--output-o|--output-bc <path>`: Output path for non-executable artifacts.
 - `--project <path>`: App project to instantiate/precompile (defaults to active project).
 - `--bundle [<dir>]`: Copy required Julia libs/stdlibs and artifacts next to the output; also sets a relative rpath.
 - `--trim[=mode]`: Enable IR/metadata trimming (e.g. `--trim=safe`). Use `--trim=no` to disable.
@@ -94,7 +95,6 @@ link = LinkRecipe(
 bun = BundleRecipe(
     link_recipe = link,
     output_dir  = "build", # or `nothing` to skip bundling
-    libdir      = "lib",
 )
 
 compile_products(img)
@@ -105,10 +105,10 @@ bundle_products(bun)
 ### Bundling and rpath
 
 When `--bundle` (or `BundleRecipe.output_dir`) is set, JuliaC:
-- Copies `libjulia`/`libjulia-internal` and stdlibs into `<output_dir>/julia`
-- Copies required artifacts
-- Links your output with a relative rpath (macOS: `@loader_path`, Linux: `$ORIGIN`)
-- On macOS, creates convenience versioned `.dylib` symlinks if missing
+- Places the executable in `<output_dir>/bin` and libraries in `<output_dir>/lib` and `<output_dir>/lib/julia` (Windows: everything under `<output_dir>/bin`).
+- Copies required artifacts alongside the bundle.
+- Links your output with a relative rpath so the executable finds sibling libs (Unix uses `@loader_path/../lib` or `$ORIGIN/../lib`).
+- On macOS, creates convenience versioned `.dylib` symlinks if missing.
 
 This produces a relocatable directory you can distribute.
 

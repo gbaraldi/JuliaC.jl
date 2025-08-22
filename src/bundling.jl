@@ -7,16 +7,21 @@ function bundle_products(recipe::BundleRecipe)
     # Ensure the bundle output directory exists
     mkpath(recipe.output_dir)
 
-    # Create julia subdirectory for bundled libraries
+    # Create julia subdirectory for bundled libraries under lib/
     ctx2 = PackageCompiler.create_pkg_context(recipe.link_recipe.image_recipe.project)
     stdlibs = unique(vcat(PackageCompiler.gather_stdlibs_project(ctx2), PackageCompiler.stdlibs_in_sysimage()))
     PackageCompiler.bundle_julia_libraries(recipe.output_dir, stdlibs)
     PackageCompiler.bundle_artifacts(ctx2, recipe.output_dir; include_lazy_artifacts=false) # Lazy artifacts
-    # Move the output library into the output_dir if it is not already there
+
+    # Determine where to place the built product within the bundle
     outname = recipe.link_recipe.outname
-    dest = isabspath(outname) ? joinpath(recipe.output_dir, basename(outname)) : joinpath(recipe.output_dir, outname)
+    is_exe = recipe.link_recipe.image_recipe.output_type == "--output-exe"
+    libdir = recipe.libdir
+    bindir = Sys.iswindows() ? libdir : "bin"
+    dest_dir = is_exe ? joinpath(recipe.output_dir, bindir) : joinpath(recipe.output_dir, libdir)
+    mkpath(dest_dir)
+    dest = joinpath(dest_dir, basename(outname))
     if abspath(outname) != abspath(dest)
-        mkpath(dirname(dest))
         mv(outname, dest; force=true)
         recipe.link_recipe.outname = dest
     end
@@ -24,7 +29,7 @@ function bundle_products(recipe::BundleRecipe)
 
     # On macOS, ensure expected dylib version symlinks exist (e.g., libjulia.1.12.dylib -> libjulia.1.12.0.dylib)
     if Sys.isapple()
-        julia_dir = joinpath(recipe.output_dir, "julia")
+        julia_dir = joinpath(recipe.output_dir, libdir, "julia")
         if isdir(julia_dir)
             # Map of base name to the symlink we want
             wanted = [

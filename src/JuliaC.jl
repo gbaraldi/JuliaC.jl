@@ -35,7 +35,7 @@ end
 Base.@kwdef mutable struct BundleRecipe
     link_recipe::LinkRecipe = LinkRecipe()
     output_dir::Union{String, Nothing} = nothing # if nothing, don't bundle
-    libdir::String = "lib"
+    libdir::String = Sys.iswindows() ? "bin" : "lib"
 end
 
 include("compiling.jl")
@@ -54,7 +54,7 @@ function _print_usage(io::IO=stdout)
     println(io, "  juliac [options] <file>")
     println(io)
     println(io, "Options:")
-    println(io, "  --output-exe <path>         Output native executable")
+    println(io, "  --output-exe <name>         Output native executable (name only)")
     println(io, "  --output-lib <path>         Output shared library (lib)")
     println(io, "  --output-sysimage <path>    Output shared library (sysimage)")
     println(io, "  --output-o <path>           Output object archive (default for linking)")
@@ -68,7 +68,7 @@ function _print_usage(io::IO=stdout)
     println(io, "  -h, --help                  Show this help")
     println(io)
     println(io, "Examples:")
-    println(io, "  juliac --output-exe build/app --project ./MyApp --bundle build --trim=safe src/main.jl")
+    println(io, "  juliac --output-exe app --project ./MyApp --bundle build --trim=safe src/main.jl")
     println(io, "  juliac --output-lib build/libapp --project ./MyApp src/libentry.jl")
 end
 
@@ -86,7 +86,14 @@ function _parse_cli_args(args::Vector{String})
             image_recipe.output_type == "" || error("Multiple output types specified")
             image_recipe.output_type = arg
             i == length(args) && error("Output specifier requires an argument")
-            link_recipe.outname = args[i+1]
+            name_or_path = args[i+1]
+            if arg == "--output-exe"
+                # Enforce name-only for executables (no paths)
+                if isabspath(name_or_path) || occursin('/', name_or_path) || occursin('\\', name_or_path)
+                    error("--output-exe expects a name (no path). Got: " * name_or_path)
+                end
+            end
+            link_recipe.outname = name_or_path
             i += 1
         elseif startswith(arg, "--trim")
             # Enable trim and parse mode for compile-time handling
@@ -127,8 +134,13 @@ function _parse_cli_args(args::Vector{String})
         if bundle_recipe.output_dir === nothing
             bundle_recipe.output_dir = abspath(dirname(link_recipe.outname))
         end
-        # Match PackageCompiler bundle layout under lib/ and lib/julia
-        link_recipe.rpath = bundle_recipe.libdir
+        # When bundling, executables are placed in bin/ and libs in lib/ (Windows: all in bin)
+        # Set rpath relative to the executable location
+        if Sys.iswindows()
+            link_recipe.rpath = bundle_recipe.libdir
+        else
+            link_recipe.rpath = joinpath("..", bundle_recipe.libdir)
+        end
     end
     return image_recipe, link_recipe, bundle_recipe
 end
