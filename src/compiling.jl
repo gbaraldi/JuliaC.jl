@@ -42,6 +42,9 @@ function compile_products(recipe::ImageRecipe)
     else
         image_arg = "--output-o"
     end
+    if recipe.cpu_target === nothing
+        recipe.cpu_target = get(ENV,"JULIA_CPU_TARGET", nothing)
+    end
     julia_cmd = `$(Base.julia_cmd(;cpu_target=recipe.cpu_target)) --startup-file=no --history-file=no`
     # Ensure the app project is instantiated and precompiled
     project_arg = recipe.project == "" ? Base.active_project() : recipe.project
