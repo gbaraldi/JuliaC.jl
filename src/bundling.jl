@@ -7,16 +7,31 @@ function bundle_products(recipe::BundleRecipe)
     # Ensure the bundle output directory exists
     mkpath(recipe.output_dir)
 
-    # Create julia subdirectory for bundled libraries under lib/
+    # Create julia subdirectory for bundled libraries under lib/ (or bin/ on Windows)
     ctx2 = PackageCompiler.create_pkg_context(recipe.link_recipe.image_recipe.project)
     stdlibs = unique(vcat(PackageCompiler.gather_stdlibs_project(ctx2), PackageCompiler.stdlibs_in_sysimage()))
     PackageCompiler.bundle_julia_libraries(recipe.output_dir, stdlibs)
     PackageCompiler.bundle_artifacts(ctx2, recipe.output_dir; include_lazy_artifacts=false) # Lazy artifacts
 
+    # Re-home bundled libraries into the desired bundle layout
+    libdir = recipe.libdir
+    # Move `<output_dir>/julia` -> `<output_dir>/<libdir>/julia`
+    src_julia_dir = joinpath(recipe.output_dir, "julia")
+    if isdir(src_julia_dir)
+        dest_root = joinpath(recipe.output_dir, libdir)
+        mkpath(dest_root)
+        dest_julia_dir = joinpath(dest_root, "julia")
+        if abspath(src_julia_dir) != abspath(dest_julia_dir)
+            if isdir(dest_julia_dir)
+                rm(dest_julia_dir; force=true, recursive=true)
+            end
+            mv(src_julia_dir, dest_julia_dir; force=true)
+        end
+    end
+
     # Determine where to place the built product within the bundle
     outname = recipe.link_recipe.outname
     is_exe = recipe.link_recipe.image_recipe.output_type == "--output-exe"
-    libdir = recipe.libdir
     bindir = Sys.iswindows() ? libdir : "bin"
     dest_dir = is_exe ? joinpath(recipe.output_dir, bindir) : joinpath(recipe.output_dir, libdir)
     mkpath(dest_dir)
