@@ -7,7 +7,8 @@ function get_rpath(recipe::LinkRecipe)
         elseif Sys.islinux()
             base_token = "-Wl,-rpath,'\$ORIGIN/"
         else
-            error("unimplemented")
+            @warn "no path set"
+            return ""
         end
         # If rpath is a relative subdir (e.g., "lib"), emit @loader_path/lib and @loader_path/lib/julia
         priv_path = joinpath(recipe.rpath, "julia")
