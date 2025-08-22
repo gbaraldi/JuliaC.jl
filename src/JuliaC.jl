@@ -46,6 +46,32 @@ export ImageRecipe, LinkRecipe, BundleRecipe
 export compile_products, link_products, bundle_products
 
 
+# Print CLI usage/help
+function _print_usage(io::IO=stdout)
+    println(io, "juliac - compile Julia code into an executable, library, sysimage, object or bitcode")
+    println(io)
+    println(io, "Usage:")
+    println(io, "  juliac [options] <file>")
+    println(io)
+    println(io, "Options:")
+    println(io, "  --output-exe <path>         Output native executable")
+    println(io, "  --output-lib <path>         Output shared library (lib)")
+    println(io, "  --output-sysimage <path>    Output shared library (sysimage)")
+    println(io, "  --output-o <path>           Output object archive (default for linking)")
+    println(io, "  --output-bc <path>          Output LLVM bitcode archive")
+    println(io, "  --project <path>            App project to instantiate/precompile")
+    println(io, "  --bundle [dir]              Bundle libjulia, stdlibs, and artifacts")
+    println(io, "  --trim[=mode]               Strip IR/metadata (e.g. --trim=safe)")
+    println(io, "  --compile-ccallable         Export ccallable entrypoints")
+    println(io, "  --experimental              Forwarded to Julia (needed for some --trim)")
+    println(io, "  --verbose                   Print commands and timings")
+    println(io, "  -h, --help                  Show this help")
+    println(io)
+    println(io, "Examples:")
+    println(io, "  juliac --output-exe build/app --project ./MyApp --bundle build --trim=safe src/main.jl")
+    println(io, "  juliac --output-lib build/libapp --project ./MyApp src/libentry.jl")
+end
+
 # CLI app entrypoint for Pkg apps
 function _parse_cli_args(args::Vector{String})
     image_recipe = ImageRecipe()
@@ -107,7 +133,11 @@ function _parse_cli_args(args::Vector{String})
     return image_recipe, link_recipe, bundle_recipe
 end
 
-function _main_cli(args::Vector{String})
+function _main_cli(args::Vector{String}; io::IO=stdout)
+    if isempty(args) || any(a -> a == "-h" || a == "--help", args)
+        _print_usage(io)
+        return
+    end
     img, link, bun = _parse_cli_args(args)
     compile_products(img)
     link_products(link)

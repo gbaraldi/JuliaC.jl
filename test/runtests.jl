@@ -75,3 +75,23 @@ end
 end
 
 
+@testset "CLI help/usage" begin
+    # Capture printed help when no args are passed
+    io = IOBuffer()
+    JuliaC._main_cli(String[]; io=io)
+    out = String(take!(io))
+    @test occursin("Usage:", out)
+    @test occursin("--output-exe", out)
+    @test occursin("--output-lib", out)
+    @test occursin("--output-sysimage", out)
+    @test occursin("--output-o", out)
+    @test occursin("--output-bc", out)
+    @test occursin("--project", out)
+    @test occursin("--bundle", out)
+    @test occursin("--trim", out)
+    @test occursin("--compile-ccallable", out)
+    @test occursin("--experimental", out)
+    @test occursin("--verbose", out)
+    @test occursin("--help", out)
+end
+
