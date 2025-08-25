@@ -44,11 +44,11 @@ end
         verbose = true,
     )
     JuliaC.compile_products(img)
-    link = JuliaC.LinkRecipe(image_recipe=img, outname=exeout, rpath="lib")
+    link = JuliaC.LinkRecipe(image_recipe=img, outname=exeout, rpath=Sys.iswindows() ? "bin" : joinpath("..", "lib"))
     JuliaC.link_products(link)
     bun = JuliaC.BundleRecipe(link_recipe=link, output_dir=outdir)
     JuliaC.bundle_products(bun)
-    actual_exe = Sys.iswindows() ? exeout * ".exe" : exeout
+    actual_exe = Sys.iswindows() ? joinpath(outdir, "bin", basename(exeout) * ".exe") : joinpath(outdir, "bin", basename(exeout))
     @test isfile(actual_exe)
     output = read(`$actual_exe`, String)
     @test occursin("Fast compilation test!", output)
@@ -56,18 +56,18 @@ end
 
 @testset "CLI app entrypoint (trim)" begin
     outdir = mktempdir()
-    exeout = joinpath(outdir, "app_cli")
+    exename = "app_cli"
     cliargs = String[
-        "--output-exe", exeout,
+        "--output-exe", exename,
         "--project", TEST_PROJ,
         "--trim=safe",
         TEST_SRC,
-        "--bundle",
+        "--bundle", outdir,
     ]
     # Invoke the module's CLI entrypoint directly to avoid any argument quoting issues
     JuliaC._main_cli(cliargs)
     # Determine actual executable path (Windows adds .exe)
-    actual_exe = Sys.iswindows() ? exeout * ".exe" : exeout
+    actual_exe = Sys.iswindows() ? joinpath(outdir, "bin", exename * ".exe") : joinpath(outdir, "bin", exename)
     @test isfile(actual_exe)
     # Execute the binary and capture output
     output = read(`$actual_exe`, String)

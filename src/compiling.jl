@@ -3,19 +3,35 @@
 function _start_spinner(message::String; io::IO=stderr)
     anim_chars = ("◐", "◓", "◑", "◒")
     finished = Ref(false)
+    # Detect whether the output supports carriage return animation
+    can_tty = io isa Base.TTY
+    term = get(ENV, "TERM", "")
+    animate = can_tty && term != "dumb"
     task = Threads.@spawn begin
         idx = 1
-        t = Timer(0; interval=0.1)
+        t = Timer(0; interval=0.2)
         try
-            while !finished[]
-                print(io, '\r', anim_chars[idx], ' ', message)
+            if !animate
+                println(io, message)
                 flush(io)
-                wait(t)
-                idx = idx == length(anim_chars) ? 1 : idx + 1
+            end
+            while !finished[]
+                if animate
+                    print(io, '\r', anim_chars[idx], ' ', message)
+                    flush(io)
+                    wait(t)
+                    idx = idx == length(anim_chars) ? 1 : idx + 1
+                else
+                    wait(t)
+                end
             end
         finally
             close(t)
-            print(io, '\r', '✓', ' ', message, '\n')
+            if animate
+                print(io, '\r', '✓', ' ', message, '\n')
+            else
+                print(io, '✓', ' ', message, '\n')
+            end
             flush(io)
         end
     end
@@ -49,7 +65,7 @@ function compile_products(recipe::ImageRecipe)
     # Ensure the app project is instantiated and precompiled
     project_arg = recipe.project == "" ? Base.active_project() : recipe.project
     env_overrides = Dict{String,Any}()
-    inst_cmd = addenv(`$(julia_cmd) --project=$project_arg -e "using Pkg; Pkg.instantiate(); Pkg.precompile()"`, env_overrides...)
+    inst_cmd = addenv(`$(julia_cmd) --project=$project_arg -e "using Pkg; Pkg.precompile()"`, env_overrides...)
     recipe.verbose && println("Running: $inst_cmd")
     precompile_time = time_ns()
     if !success(pipeline(inst_cmd; stdout, stderr))
